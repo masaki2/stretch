@@ -1,12 +1,29 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { getJoints, getMovementsForJoint, stretchData, BodyPartData } from './data';
 import { SkeletonView } from './components/SkeletonView';
 import { ContentPanel } from './components/ContentPanel';
-import { Activity, MousePointer2 } from 'lucide-react';
+import { Login } from './components/Login';
+import { Activity, MousePointer2, LogOut } from 'lucide-react';
+import { auth } from './firebase';
+import { onAuthStateChanged, signOut, User } from 'firebase/auth';
 
 function App() {
   const [selectedJointId, setSelectedJointId] = useState<string | null>(null);
   const [selectedMovement, setSelectedMovement] = useState<BodyPartData | null>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [loadingAuth, setLoadingAuth] = useState(true);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      setLoadingAuth(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const handleLogout = () => {
+    signOut(auth);
+  };
 
   const handleJointSelect = (jointId: string) => {
     setSelectedJointId(jointId);
@@ -21,15 +38,36 @@ function App() {
 
   const availableMovements = selectedJointId ? getMovementsForJoint(selectedJointId) : [];
 
+  if (loadingAuth) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-teal-200 border-t-teal-600 rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Login />;
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 font-sans selection:bg-teal-200 pb-20">
       {/* Header */}
       <header className="bg-white shadow-sm border-b border-slate-200 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center gap-3">
-          <div className="bg-teal-100 p-2 rounded-lg">
-            <Activity className="w-6 h-6 text-teal-600" />
+        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="bg-teal-100 p-2 rounded-lg">
+              <Activity className="w-6 h-6 text-teal-600" />
+            </div>
+            <h1 className="text-xl font-bold tracking-tight text-slate-700">Anatomy Stretch PRO</h1>
           </div>
-          <h1 className="text-xl font-bold tracking-tight text-slate-700">Anatomy Stretch PRO</h1>
+          <button 
+            onClick={handleLogout}
+            className="flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-slate-800 transition-colors bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-lg"
+          >
+            <LogOut size={16} />
+            ログアウト
+          </button>
         </div>
       </header>
 
